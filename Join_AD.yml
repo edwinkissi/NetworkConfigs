@@ -1,0 +1,91 @@
+---
+- name: Join Ubuntu Machine To Samba ADDC
+  hosts: all
+  become: yes
+  vars:
+    domain_name: 'Domain.Com'
+    domain_admin_user: 'Domain_Administrator'
+    domain_admin_password: "Domain_Administrator_User"  # It's better to use Ansible Vault to encrypt this
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - samba
+          - krb5-user
+          - realmd
+          - sssd
+          - sssd-tools
+          - adcli
+          - packagekit
+          - samba-common
+          - oddjob
+          - oddjob-mkhomedir
+          - libpam-sss
+          - libnss-sss
+          - sssd-tools
+        state: present
+        update_cache: yes
+
+
+    - name: Discover the domain
+      command: realm discover {{ domain_name }}
+      register: realm_discover
+
+    - name: Join the domain
+      command: realm join -U {{ domain_admin_user }} {{ domain_name }}
+      args:
+        stdin: "{{ domain_admin_password }}"
+
+    - name: Enable SSSD service
+      systemd:
+        name: sssd
+        enabled: yes
+        state: started
+
+    - name: Configure SSSD
+      blockinfile:
+        path: /etc/sssd/sssd.conf
+        create: yes
+        block: |
+          [sssd]
+          domains = {{ domain_name }}
+          config_file_version = 2
+          services = nss, pam
+
+          [domain/{{ domain_name }}]
+          domain_name = {{ domain_name }}
+          krb5_realm = {{ domain_name | upper }}
+          realmd_tags = manages-system joined-with-adcli
+          cache_credentials = True
+          id_provider = ad
+          default_shell = /bin/bash
+          ldap_id_mapping = True
+          use_fully_qualified_names = False
+          fallback_homedir = /home/%d/%u
+          access_provider = ad
+      notify: restart sssd
+
+    - name: Configure PAM To Create Home Directories On Login
+      lineinfile:
+        path: /etc/pam.d/common-session
+        regexp: '^session\s+required\s+pam_mkhomedir.so'
+        line: 'session required pam_mkhomedir.so skel=/etc/skel/ umask=0077'
+        state: present
+
+    - name: Adding Domain Admins to sudoers
+      lineinfile:
+        path: /etc/sudoers.d/Domain_Admins
+        line: '%domain\ admins ALL=(ALL:ALL) ALL'
+        create: yes
+  
+  handlers:
+    - name: restart sssd
+      systemd:
+        name: sssd
+        state: restarted
+
+
+    - name: Reboot Machine And Send A Message
+      reboot:
+        msg: "Rebooting machine in 5 seconds"

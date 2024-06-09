@@ -1,0 +1,101 @@
+---
+
+- hosts: all
+  become: true
+  pre_tasks:
+
+  - name: Updating Cache and Installing Update
+    apt:
+      update_cache: yes
+      upgrade: yes
+    when: ansible_pkg_mgr == "apt"
+
+  - name: Updating Cache and Installing Update
+    dnf:
+      update_cache: yes
+      update_only: yes
+    when: ansible_pkg_mgr == "dnf"
+
+  - name: Installing  Base Software
+    apt:
+      pkg:
+        - apt-transport-https
+        - build-essential
+        - ufw
+      state: present
+
+- hosts: all
+  become: true/home/%d/home/%d/%u/%u
+  tasks:
+
+  - name: Create ladmin User
+    tags: always
+    user:
+      name: ladmin
+      groups: sudo
+
+  - name: Add SSH Key For ladmin
+    tags: always
+    authorized_key:
+      user: ladmin
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
+
+  - name: Add Sudoers File For ladmin
+    tags: always
+    copy:
+      src: sudoer_ladmin
+      dest: /etc/sudoers.d/ladmin
+      owner: root
+      group: root
+      mode: 0440
+
+  - name: Creating Regular User
+    user:
+      name: luser
+      password: "{{ luser_passwd | password_hash('sha512') }}"
+      state: present
+      groups: sudo
+      shell: /bin/bash
+
+  - name: Ensure Authorized Key For Root Account Is Installed
+    authorized_key:
+      user: root
+      state: present
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
+
+  - name: Updating Root Account Password
+    user:
+      name: root
+      password: "{{ luser_passwd | password_hash('sha512') }}"
+
+  - name: Disabling SSH Password Authentication For All Users
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      state: present
+      regexp: '^#PasswordAuthentication yes'
+      line: 'PasswordAuthentication no'
+
+  - name: Disabling SSH Password Authentication For Root Account
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      state: present
+      regexp: '^#?PermitRootLogin'
+      line: 'PermitRootLogin prohibit-password'
+
+  - name: ENabling SSH Public Key Authentication For All Accounts
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      state: present
+      regexp: '^#PubkeyAuthentication yes'
+      line: 'PubkeyAuthentication yes'
+
+  - name: Enable UFW Firewall
+    ufw:
+     state: enabled
+
+  - name: Allowing Default SSH Port.
+    ufw:
+      rule: allow
+      proto: tcp
+      port: 22
+      state: enabled

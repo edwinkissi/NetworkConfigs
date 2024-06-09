@@ -1,0 +1,21 @@
+  - name: Create ladmin User
+    tags: always
+    user:
+      name: ladmin
+      groups: root
+
+  - name: Add SSH Key For ladmin
+    tags: always
+    authorized_key:
+      user: ladmin
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKl6v3qOHRy9yrcDNDdUU2h0QDjJUF+C6dkjtQHTDylW eddy@Budgie"
+
+
+  - name: Add Sudoers File For ladmin
+    tags: always
+    copy:
+      src: sudoer_ladmin
+      dest: /etc/sudoers.d/ladmin
+      owner: root
+      group: root
+      mode: 0440

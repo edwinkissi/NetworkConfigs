@@ -1,0 +1,44 @@
+---
+
+- hosts: all
+  become: true
+  pre_tasks:
+
+  - name: update repository index (CentOS)
+    tags: always
+    dnf:
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "CentOS"
+
+  - name: update repository index (Ubuntu)
+    tags: always
+    apt:
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "Ubuntu"
+
+- hosts: all
+  become: true
+  roles:
+    - Base
+      
+- hosts: Linux_Client_Devices 
+  become: true
+  roles:
+    - Workstation
+  
+- hosts: Web_Server_Devices
+  become: true
+  roles:
+    - Web_Server
+
+- hosts: DB_Server_Devices
+  become: true
+  roles:
+    - DB_Server
+
+- hosts: File_Server_Devices
+  become: true
+  roles:
+    - File_Server

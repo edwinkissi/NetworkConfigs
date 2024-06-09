@@ -1,0 +1,6 @@
+- name: Installing Required Packages
+  package:
+    name:
+      - unzip
+      - vlc
+      -
