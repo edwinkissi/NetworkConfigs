@@ -22,17 +22,21 @@
         - apt-transport-https
         - build-essential
         - ufw
+        - openssh-server
       state: present
 
 - hosts: all
-  become: true/home/%d/home/%d/%u/%u
+  become: true
   tasks:
 
   - name: Create ladmin User
-    tags: always
     user:
       name: ladmin
       groups: sudo
+      state: present
+
+  - name: Remove ladmin Password
+    command: passwd -d ladmin
 
   - name: Add SSH Key For ladmin
     tags: always
@@ -49,24 +53,24 @@
       group: root
       mode: 0440
 
-  - name: Creating Regular User
-    user:
-      name: luser
-      password: "{{ luser_passwd | password_hash('sha512') }}"
-      state: present
-      groups: sudo
-      shell: /bin/bash
+  #- name: Creating Regular User
+    #user:
+      #name: luser
+      #password: "{{ luser_passwd | password_hash('sha512') }}"
+      #state: present
+      #groups: sudo
+      #shell: /bin/bash
 
-  - name: Ensure Authorized Key For Root Account Is Installed
-    authorized_key:
-      user: root
-      state: present
-      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
+  #- name: Ensure Authorized Key For Root Account Is Installed
+    #authorized_key:
+      #user: root
+      #state: present
+      #key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
 
-  - name: Updating Root Account Password
-    user:
-      name: root
-      password: "{{ luser_passwd | password_hash('sha512') }}"
+  #- name: Updating Root Account Password
+    #user:
+      #name: root
+      #password: "{{ luser_passwd | password_hash('sha512') }}"
 
   - name: Disabling SSH Password Authentication For All Users
     lineinfile:
@@ -82,12 +86,19 @@
       regexp: '^#?PermitRootLogin'
       line: 'PermitRootLogin prohibit-password'
 
-  - name: ENabling SSH Public Key Authentication For All Accounts
+  - name: Enabling SSH Public Key Authentication For All Accounts
     lineinfile:
       path: /etc/ssh/sshd_config
       state: present
       regexp: '^#PubkeyAuthentication yes'
       line: 'PubkeyAuthentication yes'
+
+  - name: Enabling SSH Public Key Authentication For All Accounts
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      state: present
+      regexp: '^#PermitEmptyPasswords no'
+      line: 'PermitEmptyPasswords yes'
 
   - name: Enable UFW Firewall
     ufw:

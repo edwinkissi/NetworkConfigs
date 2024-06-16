@@ -1,0 +1,84 @@
+---
+- name: Install and configure Samba as a Domain Controller
+  hosts: all
+  become: yes
+  vars:
+    domain_name: "example.com"
+    realm_name: "EXAMPLE.COM"
+    admin_password: "YourStrongPassword"
+    smb_conf_path: "/etc/samba/smb.conf"
+
+  tasks:
+    - name: Install required packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - samba
+        - samba-common-bin
+        - krb5-user
+        - winbind
+        - smbclient
+        - ldap-utils
+        - python3-samba
+
+    - name: Provision Samba as a DC
+      command: >
+        samba-tool domain provision
+        --use-rfc2307
+        --interactive
+        --realm {{ realm_name }}
+        --domain {{ domain_name.split('.')[0] }}
+        --server-role dc
+        --dns-backend SAMBA_INTERNAL
+      args:
+        creates: /var/lib/samba/private/krb5.conf
+
+    - name: Copy Kerberos configuration
+      copy:
+        src: /var/lib/samba/private/krb5.conf
+        dest: /etc/krb5.conf
+
+    - name: Configure smb.conf for Samba DC
+      lineinfile:
+        path: "{{ smb_conf_path }}"
+        line: "{{ item }}"
+        create: yes
+      loop:
+        - "[global]"
+        - "workgroup = {{ domain_name.split('.')[0].upper() }}"
+        - "realm = {{ realm_name }}"
+        - "netbios name = {{ ansible_hostname }}"
+        - "server role = active directory domain controller"
+        - "dns forwarder = 10.0.0.1"
+        - "idmap_ldb:use rfc2307 = yes"
+        - "[netlogon]"
+        - "path = /var/lib/samba/sysvol/{{ domain_name }}/scripts"
+        - "read only = no"
+        - "[sysvol]"
+        - "path = /var/lib/samba/sysvol"
+        - "read only = no"
+
+    - name: Enable and start Samba services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - samba-ad-dc
+        - winbind
+
+    - name: Verify Samba configuration
+      command: samba-tool dbcheck
+      register: samba_dbcheck
+
+    - name: Output Samba DB check result
+      debug:
+        msg: "{{ samba_dbcheck.stdout }}"
+
+    - name: Set administrator password
+      command: >
+        samba-tool user setpassword administrator
+        --newpassword={{ admin_password }}
+      when: admin_password is defined
+
