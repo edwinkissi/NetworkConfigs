@@ -7,22 +7,22 @@
   - name: Updating Cache and Installing Update
     apt:
       update_cache: yes
-      upgrade: yes
+      #upgrade: yes
     when: ansible_pkg_mgr == "apt"
 
   - name: Updating Cache and Installing Update
     dnf:
       update_cache: yes
-      update_only: yes
+      #update_only: yes
     when: ansible_pkg_mgr == "dnf"
 
   - name: Installing  Base Software
     apt:
       pkg:
-        - apt-transport-https
-        - build-essential
-        - ufw
-        - openssh-server
+        #groups:- apt-transport-https
+        #- build-essential
+        #- ufw
+        #- openssh-server
       state: present
 
 - hosts: all
@@ -34,10 +34,7 @@
       name: ladmin
       groups: sudo
       state: present
-
-  - name: Remove ladmin Password
-    command: passwd -d ladmin
-
+ 
   - name: Add SSH Key For ladmin
     tags: always
     authorized_key:
