@@ -1,0 +1,27 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+
+  - name: Create ladmin User
+    user:
+      name: ladmin
+      password: "{{ ladmin_passwd | password_hash('sha512') }}"
+      groups: sudo
+      state: present
+ 
+  - name: Add SSH Key For ladmin
+    tags: always
+    authorized_key:
+      user: ladmin
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
+
+  - name: Add Sudoers File For ladmin
+    tags: always
+    copy:
+      src: sudoer_ladmin
+      dest: /etc/sudoers.d/ladmin
+      owner: root
+      group: root
+      mode: 0440
