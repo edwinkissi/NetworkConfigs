@@ -32,6 +32,7 @@
   - name: Create ladmin User
     user:
       name: ladmin
+      password: "{{ ladmin_passwd | password_hash('sha512') }}"
       groups: sudo
       state: present
  
@@ -50,24 +51,23 @@
       group: root
       mode: 0440
 
-  #- name: Creating Regular User
-    #user:
-      #name: luser
-      #password: "{{ luser_passwd | password_hash('sha512') }}"
-      #state: present
-      #groups: sudo
-      #shell: /bin/bash
+  - name: Creating Local User
+    user:
+      name: luser
+      password: "{{ luser_passwd | password_hash('sha512') }}"
+      state: present
+      shell: /bin/bash
 
-  #- name: Ensure Authorized Key For Root Account Is Installed
-    #authorized_key:
-      #user: root
-      #state: present
-      #key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
+  - name: Ensure Authorized Key For Root Account Is Installed
+    authorized_key:
+      user: root
+      state: present
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILOCtx9trahcJbnyvRb5b34GgcwPRbYIF1+Ld9AXDGTQ"
 
-  #- name: Updating Root Account Password
-    #user:
-      #name: root
-      #password: "{{ luser_passwd | password_hash('sha512') }}"
+  - name: Updating Root Account Password
+    user:
+      name: root
+      password: "{{ rtuser_passwd | password_hash('sha512') }}"
 
   - name: Disabling SSH Password Authentication For All Users
     lineinfile:
