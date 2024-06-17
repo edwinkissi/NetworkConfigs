@@ -3,9 +3,9 @@
   hosts: all
   become: yes
   vars:
-    domain_name: 'Domain.Com'
-    domain_admin_user: 'Domain_Administrator'
-    domain_admin_password: "Domain_Administrator_User"  # It's better to use Ansible Vault to encrypt this
+    domain_name: 'CROSSIT.TECH'
+    domain_admin_user: "{{domain_admin_user}}"
+    domain_admin_password: "{{domain_admin_password:}}"  # It's better to use Ansible Vault to encrypt this
 
   tasks:
     - name: Install required packages
@@ -62,7 +62,7 @@
           default_shell = /bin/bash
           ldap_id_mapping = True
           use_fully_qualified_names = False
-          fallback_homedir = /home/%d/%u
+          fallback_homedir = /home/%D/%U
           access_provider = ad
       notify: restart sssd
 
